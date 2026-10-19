@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Best</title><meta name="theme-color" content="#14213d"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-title" content="The Best">
+<style>
+:root{--bg:#f6f3ec;--ink:#14213d;--mut:#5b6478;--card:#fff;--gold:#c9970c;--line:#e4dfd2}
+@media(prefers-color-scheme:dark){:root{--bg:#10182b;--ink:#f3efe3;--mut:#9aa4bb;--card:#1a2540;--line:#2a3658}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{padding:22px 18px 8px;display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font:800 30px Georgia,serif;letter-spacing:-.5px}h1 span{color:var(--gold)}
+button{font:inherit;cursor:pointer}.gear{background:none;border:0;font-size:22px;color:var(--ink)}
+.bar{display:flex;gap:8px;padding:8px 18px}input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px;width:100%}
+.go{background:var(--ink);color:var(--bg);border:0;border-radius:12px;padding:0 20px;font-weight:700}
+.tabs{display:flex;gap:8px;padding:6px 18px}.tabs button{flex:1;padding:9px 2px;font-size:12.5px;border-radius:10px;border:1.5px solid var(--line);background:none;color:var(--mut);font-weight:600}.tabs .on{background:var(--gold);border-color:var(--gold);color:#fff}
+main{padding:8px 18px 40px}.msg{color:var(--mut);padding:30px 0;text-align:center;line-height:1.8}
+.item{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;text-decoration:none;color:inherit}
+.item:first-child{border:2px solid var(--gold)}
+.rank{font:800 26px Georgia,serif;color:var(--gold);min-width:30px;text-align:center}
+.item img{width:112px;height:72px;object-fit:cover;border-radius:8px;flex:none}
+.t{font-weight:700;line-height:1.5;font-size:15px}.m{color:var(--mut);font-size:12.5px;margin-top:4px;line-height:1.6}
+.sc{display:inline-block;background:var(--ink);color:var(--bg);border-radius:20px;padding:1px 9px;font-size:12px;margin-top:5px}
+dialog{border:0;border-radius:16px;background:var(--bg);color:var(--ink);width:min(92vw,460px)}label{display:block;margin:12px 0 4px;font-weight:600;font-size:14px}
+</style></head><body>
+<script src="config.js"></script>
+<header><h1>The <span>Best</span></h1><button class="gear" onclick="D.showModal()" aria-label="الإعدادات">⚙</button></header>
+<div class="bar"><input id="q" placeholder="أفضل شرح كيمياء للصف الثالث الثانوي..." enterkeyhint="search"><button class="go" onclick="run()">ابحث</button></div>
+<div class="tabs"><button id="tv" class="on" onclick="tab('v')">فيديوهات</button><button id="tk" onclick="tab('k')">ويكيبيديا</button><button id="tp" onclick="tab('p')">أبحاث</button><button id="ts" onclick="tab('s')">برمجة</button><button id="tb" onclick="tab('b')">كتب</button></div>
+<main id="out"><div class="msg">اكتب ما تبحث عنه وسأرتّب لك أفضل 5 نتائج.</div></main><div id="dbg" class="m" style="text-align:center;padding:0 18px 24px"></div>
+<dialog id="D"><h3>الإعدادات</h3>
+<label>مفتاح YouTube Data API</label><input id="yk" dir="ltr">
+
+<label>قنوات/مواقع المتخصصين الموثوقة (واحد في كل سطر)</label><textarea id="tr" rows="4" dir="ltr"></textarea>
+<p class="m">النتائج من القنوات الموثوقة تحصل على نقاط إضافية.</p>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="go" style="padding:11px 20px" onclick="save()">حفظ</button><button class="go" style="background:none;color:var(--ink);border:1.5px solid var(--line)" onclick="D.close()">إغلاق</button></div></dialog>
+<script>
+const K=window.TB_CONFIG||{},$=i=>document.getElementById(i),S=k=>K[k]||localStorage.getItem(k)||"";
+let cur="v",searched=false,data={v:[],k:[],p:[],s:[],b:[]},errs={};
+const DEF_TRUST="khanacademy\nThe Organic Chemistry Tutor\nFreeCodeCamp\nProgramming with Mosh\nCS50\nTED-Ed";
+const L=x=>Math.log10(x+1),fmt=n=>n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":n;
+const esc=t=>String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const dec=t=>String(t).replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&");
+const clean=q=>q.replace(/(^|\s)(أفضل|افضل|احسن|أحسن|best|top)(?=\s|$)/gi,"$1").replace(/\s+/g," ").trim()||q;
+const AR=/[\u0600-\u06FF]/;
+function init(){$("yk").value=S("yk");$("tr").value=localStorage.getItem("tr")??DEF_TRUST;if(K.yk){$("yk").style.display="none";$("yk").previousElementSibling.style.display="none"}if(!S("yk"))D.showModal()}
+function save(){if(!K.yk)localStorage.setItem("yk",$("yk").value.trim());localStorage.setItem("tr",$("tr").value.trim());D.close()}
+const trust=()=>($("tr").value||"").split("\n").map(x=>x.trim().toLowerCase()).filter(Boolean);
+function tab(t){cur=t;["v","k","p","s","b"].forEach(x=>$("t"+x).className=t==x?"on":"");draw()}
+function draw(){if(!searched)return;const a=data[cur];$("out").innerHTML=a.length?a.map((r,i)=>`<a class="item" href="${/^https?:/.test(r.url)?esc(r.url):"#"}" target="_blank" rel="noopener"><div class="rank">${i+1}</div>${r.img?`<img src="${esc(r.img)}" alt="">`:""}<div><div class="t">${esc(r.title)}</div><div class="m">${esc(r.meta)}</div><span class="sc">${r.score}/100</span>${r.trusted?' <span class="m">✓ مصدر موثوق</span>':""}</div></a>`).join(""):`<div class="msg">${esc(errs[cur]||"لا توجد نتائج.")}</div>`}
+function pickTop(r,max){r.sort((a,b)=>b.raw-a.raw);r=r.slice(0,5);const hi=r[0]?.raw||1;r.forEach(x=>x.score=Math.min(99,Math.round(x.raw/hi*97)));return r}
+async function yt(q){const k=S("yk");if(!k)throw"أضف مفتاح YouTube من الإعدادات.";
+const s=await(await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=25&q=${encodeURIComponent(q)}&key=${k}`)).json();if(s.error)throw s.error.message;
+const ids=s.items.map(i=>i.id.videoId).join(",");
+const v=await(await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${ids}&key=${k}`)).json();const T=trust();
+const r=v.items.map(i=>{const st=i.statistics,vw=+st.viewCount||0,lk=+st.likeCount||0,cm=+st.commentCount||0,ch=i.snippet.channelTitle;
+const tr=T.some(t=>ch.toLowerCase().includes(t));
+const raw=L(vw)*3.5+L(lk)*3+L(cm)*1.5+(vw?Math.min(lk/vw,.08)/.08*10:0)+(tr?8:0);
+return{raw,trusted:tr,title:i.snippet.title,url:"https://www.youtube.com/watch?v="+i.id,img:i.snippet.thumbnails.medium.url,meta:`${ch} • 👁 ${fmt(vw)} • 👍 ${fmt(lk)} • 💬 ${fmt(cm)}`}});
+return pickTop(r,40)}
+async function wiki(q){const lg=AR.test(q)?"ar":"en";
+const s=await(await fetch(`https://${lg}.wikipedia.org/w/api.php?action=query&list=search&srlimit=10&format=json&origin=*&srsearch=${encodeURIComponent(q)}`)).json();
+const r=(s.query?.search||[]).map((i,n)=>({raw:(10-n)*3+L(i.wordcount||0)*2,trusted:false,title:i.title,url:`https://${lg}.wikipedia.org/wiki/${encodeURIComponent(i.title.replace(/ /g,"_"))}`,meta:dec((i.snippet||"").replace(/<[^>]+>/g,""))+" ... ("+(i.wordcount||0)+" كلمة)"}));return pickTop(r,40)}
+async function sci(q){const s=await(await fetch(`https://api.openalex.org/works?per-page=25&search=${encodeURIComponent(q)}&select=title,cited_by_count,publication_year,doi,id,primary_location`)).json();
+const y=new Date().getFullYear();
+const r=(s.results||[]).map(i=>{const c=i.cited_by_count||0,age=Math.max(1,y-(i.publication_year||y));const jn=i.primary_location?.source?.display_name||"";
+return{raw:L(c)*6+L(c/age)*6,trusted:!!jn,title:i.title||"بدون عنوان",url:i.doi||i.id,meta:`${jn||"—"} • ${i.publication_year||""} • 📚 ${fmt(c)} استشهاد`}});return pickTop(r,40)}
+async function so(q){if(AR.test(q))throw"هذا المصدر يعمل بالإنجليزية. اكتب بحثك بالإنجليزية، مثل: best way to learn python.";
+const s=await(await fetch(`https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=votes&pagesize=25&site=stackoverflow&q=${encodeURIComponent(clean(q))}`)).json();
+if(s.error_message)throw s.error_message;
+const r=(s.items||[]).map(i=>{const acc=!!i.accepted_answer_id,sc=Math.max(i.score||0,0);
+return{raw:L(sc)*8+(acc?10:0)+L(i.view_count||0)*2+L(i.answer_count||0)*2,trusted:false,title:dec(i.title),url:i.link,meta:`▲ ${i.score} • ${i.answer_count} إجابات • 👁 ${fmt(i.view_count||0)}${acc?" • ✓ إجابة مقبولة":""}`}});return pickTop(r,50)}
+async function books(q){const s=await(await fetch(`https://openlibrary.org/search.json?limit=30&fields=key,title,author_name,first_publish_year,ratings_average,ratings_count,want_to_read_count&q=${encodeURIComponent(clean(q))}`)).json();
+const r=(s.docs||[]).map(i=>{const n=i.ratings_count||0,a=i.ratings_average||0,w=i.want_to_read_count||0,b=(n*a+10*3.5)/(n+10);
+return{raw:b*6+L(w)*3+L(n)*3,trusted:false,title:i.title,url:"https://openlibrary.org"+i.key,meta:`${(i.author_name||["—"]).slice(0,2).join("، ")} • ${i.first_publish_year||""} • ⭐ ${a?a.toFixed(1):"—"} (${n}) • 🔖 ${fmt(w)}`}});return pickTop(r,60)}
+async function run(){try{const q=$("q").value.trim();if(!q)return;$("out").innerHTML='<div class="msg">جارٍ البحث وترتيب النتائج...</div>';
+const keys=["v","k","p","s","b"],fn=[yt,wiki,sci,so,books];
+const rs=await Promise.allSettled(fn.map(f=>f(q)));
+keys.forEach((k,i)=>{data[k]=rs[i].value||[];errs[k]=rs[i].status=="rejected"?String(rs[i].reason&&rs[i].reason.message||rs[i].reason):""});
+searched=true;draw()}catch(e){$("out").innerHTML='<div class="msg">خطأ: '+esc(e.message||e)+'</div>'}}
+window.addEventListener("error",e=>{$("out").innerHTML='<div class="msg">خطأ: '+esc(e.message)+'</div>'});
+window.addEventListener("unhandledrejection",e=>{$("out").innerHTML='<div class="msg">خطأ: '+esc(e.reason&&e.reason.message||e.reason)+'</div>'});
+$("dbg").textContent="النسخة 7 • مفتاح YouTube: "+(K.yk?"موجود":"غير موجود");
+$("q").addEventListener("keydown",e=>e.key=="Enter"&&run());init();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
